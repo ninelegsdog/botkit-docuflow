@@ -18,6 +18,9 @@ dependencies = [
     "reportlab>=4.0",
 ]
 
+[tool.setuptools.packages.find]
+include = ["src*"]
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
