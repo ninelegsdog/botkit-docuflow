@@ -11,6 +11,8 @@ class Config:
     db_path: str = "docuflow.db"
     redis_url: str = "redis://localhost:6379/0"
     log_level: str = "INFO"
+    sentry_dsn: str = ""
+    metrics_port: int = 8087
     free_docs_limit: int = 5
     max_template_fields: int = 20
 
@@ -22,5 +24,7 @@ class Config:
             db_path=os.getenv("DB_PATH", "docuflow.db"),
             redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
             log_level=os.getenv("LOG_LEVEL", "INFO"),
+            sentry_dsn=os.getenv("SENTRY_DSN", ""),
+            metrics_port=int(os.getenv("METRICS_PORT", "8087")),
             free_docs_limit=int(os.getenv("FREE_DOCS_LIMIT", "5")),
         )

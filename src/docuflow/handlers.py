@@ -5,7 +5,15 @@ import tempfile
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import (
+    CallbackQuery,
+    FSInputFile,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    LabeledPrice,
+    Message,
+    PreCheckoutQuery,
+)
 
 from src.core.bot_factory import AppState
 from src.core.fsm import DocGenerate
@@ -198,5 +206,32 @@ def create_docuflow_router(state: AppState) -> Router:
                 f"📄 #{doc['id']} — {escape(str(doc.get('template_name', '')))} "
                 f"({escape(str(doc.get('created_at', '')))})"
             )
+
+    @router.message(Command("buy_docs"))
+    async def buy_docs(message: Message) -> None:
+        await message.answer_invoice(
+            title="Документы",
+            description="Пакет из 10 документов",
+            payload="docs_pack_10",
+            currency="XTR",
+            prices=[LabeledPrice(label="10 документов", amount=10)],
+        )
+
+    @router.pre_checkout_query()
+    async def pre_checkout(query: PreCheckoutQuery) -> None:
+        await query.answer(ok=True)
+
+    @router.message(F.successful_payment)
+    async def on_paid(message: Message) -> None:
+        sp = message.successful_payment
+        if sp is None or sp.invoice_payload != "docs_pack_10":
+            return
+        uid = message.from_user.id  # type: ignore[union-attr]
+        ok = await service.add_quota(state.db, uid, docs=10)
+        if ok:
+            await service.record_payment(
+                state.db, uid, "stars", float(sp.total_amount), sp.telegram_payment_charge_id
+            )
+        await message.answer("✅ Оплачено! Лимит увеличен на 10 документов.")
 
     return router

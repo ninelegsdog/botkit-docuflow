@@ -200,3 +200,29 @@ async def get_user_count(db: Database) -> int:
         result = await session.execute(text("SELECT COUNT(*) FROM users"))
         row = result.fetchone()
         return int(row[0]) if row else 0
+
+
+async def add_quota(db: Database, user_id: int, docs: int) -> bool:
+    """Add docs to the subscription limit after successful payment."""
+    async with db.transaction() as session:
+        result = await session.execute(
+            text(
+                "UPDATE subscriptions SET docs_limit = docs_limit + :docs"
+                " WHERE user_id = :uid"
+            ),
+            {"docs": docs, "uid": user_id},
+        )
+        return bool(result.rowcount)  # type: ignore[attr-defined]
+
+
+async def record_payment(
+    db: Database, user_id: int, provider: str, amount: float, external_id: str | None
+) -> None:
+    async with db.transaction() as session:
+        await session.execute(
+            text(
+                "INSERT INTO payments (user_id, provider, amount, status, external_id)"
+                " VALUES (:uid, :provider, :amount, 'paid', :ext)"
+            ),
+            {"uid": user_id, "provider": provider, "amount": amount, "ext": external_id},
+        )
