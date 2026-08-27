@@ -24,9 +24,9 @@ from src.generator.parser import substitute_template, validate_field_value
 from src.generator.pdf import render_pdf
 
 
-def create_docuflow_router(state: AppState) -> Router:
+def create_docuflow_router(app_state: AppState) -> Router:
     router = Router()
-    db = state.db
+    db = app_state.db
 
     @router.message(Command("start"))
     async def cmd_start(message: Message) -> None:
@@ -42,7 +42,7 @@ def create_docuflow_router(state: AppState) -> Router:
         )
 
     @router.message(F.text == "📄 Создать документ")
-    async def start_create(message: Message, state_fsm: FSMContext) -> None:
+    async def start_create(message: Message, state: FSMContext) -> None:
         categories = await service.get_categories(db)
         if not categories:
             await message.answer("Нет доступных шаблонов.")
@@ -56,7 +56,7 @@ def create_docuflow_router(state: AppState) -> Router:
         await message.answer("Выберите категорию:", reply_markup=kb)
 
     @router.callback_query(F.data.startswith("cat:"))
-    async def choose_category(callback: CallbackQuery, state_fsm: FSMContext) -> None:
+    async def choose_category(callback: CallbackQuery, state: FSMContext) -> None:
         if not callback.data:
             return
         category = callback.data.split(":", 1)[1]
@@ -75,7 +75,7 @@ def create_docuflow_router(state: AppState) -> Router:
         await callback.answer()
 
     @router.callback_query(F.data.startswith("tpl:"))
-    async def choose_template(callback: CallbackQuery, state_fsm: FSMContext) -> None:
+    async def choose_template(callback: CallbackQuery, state: FSMContext) -> None:
         if not callback.data:
             return
         tpl_id = int(callback.data.split(":")[1])
@@ -84,13 +84,13 @@ def create_docuflow_router(state: AppState) -> Router:
             await callback.message.edit_text("Шаблон без полей.")  # type: ignore[union-attr]
             await callback.answer()
             return
-        await state_fsm.update_data(template_id=tpl_id, fields=[f["name"] for f in fields],
+        await state.update_data(template_id=tpl_id, fields=[f["name"] for f in fields],
                                      field_labels={f["name"]: f["label"] for f in fields},
                                      field_types={f["name"]: f["field_type"] for f in fields},
                                      field_examples={f["name"]: f.get("example", "") for f in fields},
                                      field_required={f["name"]: bool(f["required"]) for f in fields},
                                      values={}, current_field_idx=0)
-        await state_fsm.set_state(DocGenerate.entering_fields)
+        await state.set_state(DocGenerate.entering_fields)
         first_field = fields[0]
         await callback.message.edit_text(  # type: ignore[union-attr]
             f"📝 Поле 1/{len(fields)}: {escape(first_field['label'])}\n"
@@ -99,8 +99,8 @@ def create_docuflow_router(state: AppState) -> Router:
         await callback.answer()
 
     @router.message(DocGenerate.entering_fields)
-    async def enter_field(message: Message, state_fsm: FSMContext) -> None:
-        data = await state_fsm.get_data()
+    async def enter_field(message: Message, state: FSMContext) -> None:
+        data = await state.get_data()
         fields = data.get("fields", [])
         idx = data.get("current_field_idx", 0)
         field_types = data.get("field_types", {})
@@ -126,7 +126,7 @@ def create_docuflow_router(state: AppState) -> Router:
 
         next_idx = idx + 1
         if next_idx >= len(fields):
-            await state_fsm.update_data(values=values, current_field_idx=next_idx)
+            await state.update_data(values=values, current_field_idx=next_idx)
             summary = "\n".join(f"• {escape(str(data.get('field_labels', {}).get(k, k)))}: {escape(v)}"
                                 for k, v in values.items())
             kb = InlineKeyboardMarkup(
@@ -137,21 +137,21 @@ def create_docuflow_router(state: AppState) -> Router:
                     ]
                 ]
             )
-            await state_fsm.set_state(DocGenerate.confirming)
+            await state.set_state(DocGenerate.confirming)
             await message.answer(f"📋 Проверьте данные:\n{summary}", reply_markup=kb)
         else:
             next_field_name = fields[next_idx]
             labels = data.get("field_labels", {})
             examples = data.get("field_examples", {})
-            await state_fsm.update_data(values=values, current_field_idx=next_idx)
+            await state.update_data(values=values, current_field_idx=next_idx)
             await message.answer(
                 f"📝 Поле {next_idx + 1}/{len(fields)}: {escape(labels.get(next_field_name, next_field_name))}\n"
                 f"Пример: {escape(str(examples.get(next_field_name, '')))}"
             )
 
     @router.callback_query(F.data == "doc_confirm", DocGenerate.confirming)
-    async def confirm_generate(callback: CallbackQuery, state_fsm: FSMContext) -> None:
-        data = await state_fsm.get_data()
+    async def confirm_generate(callback: CallbackQuery, state: FSMContext) -> None:
+        data = await state.get_data()
         tpl_id = data.get("template_id", 0)
         values = data.get("values", {})
 
@@ -159,7 +159,7 @@ def create_docuflow_router(state: AppState) -> Router:
         if not template:
             await callback.message.edit_text("❌ Шаблон не найден.")  # type: ignore[union-attr]
             await callback.answer()
-            await state_fsm.clear()
+            await state.clear()
             return
 
         body = str(template.get("body", ""))
@@ -186,12 +186,12 @@ def create_docuflow_router(state: AppState) -> Router:
             caption=f"📄 Документ #{doc_id}",
         )
         await callback.message.answer("Выберите действие:", reply_markup=client_menu())  # type: ignore[union-attr]
-        await state_fsm.clear()
+        await state.clear()
 
     @router.callback_query(F.data == "doc_edit")
-    async def edit_fields(callback: CallbackQuery, state_fsm: FSMContext) -> None:
-        await state_fsm.set_state(DocGenerate.entering_fields)
-        await state_fsm.update_data(current_field_idx=0, values={})
+    async def edit_fields(callback: CallbackQuery, state: FSMContext) -> None:
+        await state.set_state(DocGenerate.entering_fields)
+        await state.update_data(current_field_idx=0, values={})
         await callback.message.edit_text("✏️ Начнём заново. Поле 1:")  # type: ignore[union-attr]
         await callback.answer()
 
@@ -227,10 +227,10 @@ def create_docuflow_router(state: AppState) -> Router:
         if sp is None or sp.invoice_payload != "docs_pack_10":
             return
         uid = message.from_user.id  # type: ignore[union-attr]
-        ok = await service.add_quota(state.db, uid, docs=10)
+        ok = await service.add_quota(app_state.db, uid, docs=10)
         if ok:
             await service.record_payment(
-                state.db, uid, "stars", float(sp.total_amount), sp.telegram_payment_charge_id
+                app_state.db, uid, "stars", float(sp.total_amount), sp.telegram_payment_charge_id
             )
         await message.answer("✅ Оплачено! Лимит увеличен на 10 документов.")
 
