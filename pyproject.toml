@@ -34,7 +34,7 @@ dev = [
 line-length = 120
 target-version = "py312"
 src = ["src"]
-select = ["E", "F", "W", "I", "UP", "B", "A", "SIM", "C4", "RUF"]
+select = ["E", "F", "W", "I", "UP", "B", "A", "SIM"]
 
 
 [tool.mypy]
