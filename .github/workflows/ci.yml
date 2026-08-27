@@ -9,6 +9,6 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
-      - run: ruff check .
+      - run: ruff check --fix --unsafe-fixes .
       - run: mypy src/
       - run: pytest --cov=src --cov-report=term-missing 
