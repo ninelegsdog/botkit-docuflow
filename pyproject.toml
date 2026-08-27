@@ -32,8 +32,10 @@ dev = [
 
 [tool.ruff]
 line-length = 120
-select = ["E", "F", "W", "I", "UP", "B", "A", "SIM"]
-ignore = ["SIM105"]
+target-version = "py312"
+src = ["src"]
+select = ["E", "F", "W", "I", "UP", "B", "A", "SIM", "C4", "RUF"]
+
 
 [tool.mypy]
 python_version = "3.12"
