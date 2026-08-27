@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
 from src.core.config import Config
 from src.core.ui import escape
 from src.generator.parser import parse_template_fields, substitute_template, validate_field_value

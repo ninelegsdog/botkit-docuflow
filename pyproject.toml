@@ -34,6 +34,8 @@ dev = [
 line-length = 120
 target-version = "py312"
 src = ["src"]
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "A", "SIM"]
 
 

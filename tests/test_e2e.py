@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
 from src.docuflow import service
 from src.generator.parser import parse_template_fields, substitute_template
 from src.generator.pdf import render_pdf

@@ -4,7 +4,6 @@ from typing import Any
 
 import pytest
 from sqlalchemy import text
-
 from src.core.config import Config
 from src.core.database import Database
 from src.core.migrations import migrate as run_migrate
