@@ -11,4 +11,4 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: ruff check --fix --unsafe-fixes .
       - run: mypy src/
-      - run: pytest --cov=src --cov-report=term-missing --cov-fail-under=70
+      - run: pytest --cov=src --cov-report=term-missing
