@@ -12,7 +12,6 @@ from typing import Any
 
 import pytest
 from aiohttp.test_utils import TestClient, TestServer
-
 from src.core.webhook import create_app
 
 
