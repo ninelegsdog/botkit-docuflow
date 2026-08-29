@@ -8,7 +8,7 @@ from src.generator.parser import parse_template_fields, substitute_template, val
 
 @pytest.mark.asyncio
 async def test_config_from_env(monkeypatch):
-    monkeypatch.setenv("BOT_TOKEN", "test_token")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test_token")
     config = Config.from_env()
     assert config.bot_token == "test_token"
 

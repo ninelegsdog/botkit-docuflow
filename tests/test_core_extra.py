@@ -36,7 +36,7 @@ from src.core.webhook import create_app as create_webhook_app
 # config
 # --------------------------------------------------------------------------- #
 def test_config_from_env(monkeypatch):
-    monkeypatch.setenv("BOT_TOKEN", "123456789:AAfake")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123456789:AAfake")
     monkeypatch.setenv("ADMIN_PASSWORD", "secret")
     monkeypatch.setenv("ADMIN_IDS", "1,2,3")
     monkeypatch.setenv("FREE_DOCS_LIMIT", "9")
