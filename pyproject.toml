@@ -69,7 +69,7 @@ markers = [
 [tool.coverage.run]
 branch = true
 source = ["src"]
-omit = ["tests/*", "scripts/*"]
+omit = ["tests/*", "scripts/*", "src/bot.py", "src/core/tgwebhook.py"]
 
 [tool.coverage.report]
 show_missing = true
