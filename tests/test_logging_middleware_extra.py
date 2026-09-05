@@ -4,7 +4,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-
 from src.core.logging import LoggingMiddleware, get_conversation_id, set_conversation_id
 
 

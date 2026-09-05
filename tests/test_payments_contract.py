@@ -1,18 +1,18 @@
 """Contract tests for payments (YooKassa/Stars) — respx-mock."""
 from __future__ import annotations
 
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 try:
-    import yookassa
+    import yookassa  # noqa: F401
 
     HAS_YOOKASSA = True
 except ImportError:
     HAS_YOOKASSA = False
 
 from aiogram.types import Message
-
 from src.core.payments import MockPaymentProvider
 
 try:
