@@ -15,7 +15,7 @@ def client_menu() -> ReplyKeyboardMarkup:
 def admin_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📄 Шаблоны"), KeyboardButton(text="📊 Статистика")],
+            [KeyboardButton(text="📊 Статистика")],
             [KeyboardButton(text="💳 Лимиты"), KeyboardButton(text="👥 Доступ")],
         ],
         resize_keyboard=True,
