@@ -82,5 +82,9 @@ exclude_also = ["if TYPE_CHECKING:", "if __name__ == .__main__."]
 output = "coverage.xml"
 
 [[tool.mypy.overrides]]
+module = ["src.generator.pdf", "reportlab.*"]
+warn_unused_ignores = false
+
+[[tool.mypy.overrides]]
 module = "tests.e2e.*"
 ignore_errors = true
