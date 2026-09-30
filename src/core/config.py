@@ -19,7 +19,6 @@ class Config:
     max_template_fields: int = 20
     webhook_secret: str = ""
     webhook_url: str = ""
-    webhook_cert_path: str = ""
 
     @classmethod
     def from_env(cls) -> Config:
@@ -45,7 +44,6 @@ class Config:
             free_docs_limit=int(os.getenv("FREE_DOCS_LIMIT", "5")),
             webhook_secret=os.getenv("WEBHOOK_SECRET", ""),
             webhook_url=os.getenv("WEBHOOK_URL", ""),
-            webhook_cert_path=os.getenv("WEBHOOK_CERT_PATH", ""),
         )
 
     def validate(self) -> None:
