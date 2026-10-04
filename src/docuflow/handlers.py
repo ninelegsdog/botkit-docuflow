@@ -29,7 +29,8 @@ def create_docuflow_router(app_state: AppState) -> Router:
     db = app_state.db
 
     @router.message(Command("start"))
-    async def cmd_start(message: Message) -> None:
+    async def cmd_start(message: Message, state: FSMContext) -> None:
+        await state.clear()
         user_id = message.from_user.id  # type: ignore[union-attr]
         await service.ensure_user(
             db, user_id,
