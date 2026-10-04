@@ -362,3 +362,36 @@ async def test_admin_limits_admin():
     bot = Bot(token="123456789:AAfake")
     mr = await _feed(state, bot, Update(update_id=1, message=_msg("💳 Лимиты")))
     assert mr.await_count >= 1
+
+
+@pytest.mark.asyncio
+async def test_create_docuflow_router_start_clears_fsm_state() -> None:
+    """Пользователь был посреди сценария: /start обязан сбросить состояние."""
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, MagicMock
+
+    from aiogram.fsm.context import FSMContext
+    from aiogram.fsm.storage.base import StorageKey
+    from aiogram.fsm.storage.memory import MemoryStorage
+    from aiogram.types import User
+    from src.core.fsm import DocGenerate
+    from src.docuflow.handlers import create_docuflow_router
+
+    router = create_docuflow_router(SimpleNamespace(db=MagicMock()))
+    handler = next(
+        (h.callback for h in router.message.handlers if getattr(h.callback, "__name__", None) == "cmd_start"),
+        None,
+    )
+    assert handler is not None, "обработчик cmd_start не найден"
+
+    fsm_ctx = FSMContext(MemoryStorage(), StorageKey(bot_id=0, chat_id=1, user_id=1))
+    await fsm_ctx.set_state(DocGenerate.choosing_template)
+    assert await fsm_ctx.get_state() is not None
+
+    msg = MagicMock()
+    msg.answer = AsyncMock()
+    msg.from_user = User(id=1, is_bot=False, first_name="Test")
+    with patch("src.docuflow.service.ensure_user", new=AsyncMock()):
+        await handler(msg, fsm_ctx)
+
+    assert await fsm_ctx.get_state() is None
