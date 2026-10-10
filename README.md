@@ -44,7 +44,8 @@ ADMIN_IDS, ADMIN_PASSWORD, BOT_TOKEN, DB_PATH, FREE_DOCS_LIMIT, LOG_LEVEL, METRI
 pytest
 ```
 
-96 тестов в 21 файле.
+[![CI](https://github.com/ninelegsdog/botkit-docuflow/actions/workflows/ci.yml/badge.svg)](https://github.com/ninelegsdog/botkit-docuflow/actions/workflows/ci.yml)
+Число тестов не дублируется в README вручную — актуальный прогон смотрите в CI (бейдж выше).
 
 ## Бэкапы
 
