@@ -220,6 +220,12 @@ def create_docuflow_router(app_state: AppState) -> Router:
 
     @router.pre_checkout_query()
     async def pre_checkout(query: PreCheckoutQuery) -> None:
+        # Validate before approving: pre_checkout is the only gate before the charge, so
+        # an unconditional ok=True lets a hand-crafted update buy the pack for 1 Star
+        # instead of 10. Both the payload and the amount are pinned to what we sell.
+        if query.invoice_payload != "docs_pack_10" or int(query.total_amount) != 10:
+            await query.answer(ok=False, error_message="Неизвестный товар")
+            return
         await query.answer(ok=True)
 
     @router.message(F.successful_payment)
