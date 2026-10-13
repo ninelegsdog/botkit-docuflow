@@ -16,6 +16,7 @@ from aiogram.types import (
 )
 
 from src.core.bot_factory import AppState
+from src.core.callbacks import parse_callback_int
 from src.core.fsm import DocGenerate
 from src.core.nav import client_menu
 from src.core.ui import escape
@@ -79,7 +80,10 @@ def create_docuflow_router(app_state: AppState) -> Router:
     async def choose_template(callback: CallbackQuery, state: FSMContext) -> None:
         if not callback.data:
             return
-        tpl_id = int(callback.data.split(":")[1])
+        tpl_id = parse_callback_int(callback.data, "tpl:")
+        if tpl_id is None:
+            await callback.answer("Некорректный запрос.", show_alert=True)
+            return
         fields = await service.get_template_fields(db, tpl_id)
         if not fields:
             await callback.message.edit_text("Шаблон без полей.")  # type: ignore[union-attr]
