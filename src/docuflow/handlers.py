@@ -116,7 +116,7 @@ def create_docuflow_router(app_state: AppState) -> Router:
             return
 
         field_name = fields[idx]
-        value = message.text or ""
+        value = (message.text or "").strip()
 
         if not value and field_required.get(field_name, True):
             await message.answer("⚠️ Поле обязательное. Введите значение:")
