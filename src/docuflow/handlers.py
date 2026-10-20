@@ -20,7 +20,7 @@ from src.core.callbacks import parse_callback_int
 from src.core.fsm import DocGenerate
 from src.core.nav import client_menu
 from src.core.ui import escape
-from src.docuflow import service
+from src.docuflow import service, texts
 from src.generator.parser import substitute_template, validate_field_value
 from src.generator.pdf import render_pdf
 
@@ -39,7 +39,7 @@ def create_docuflow_router(app_state: AppState) -> Router:
             getattr(message.from_user, "username", None),
         )
         await message.answer(
-            "📄 Генерация документов в Telegram!",
+            texts.WELCOME,
             reply_markup=client_menu(),
         )
 
@@ -47,7 +47,7 @@ def create_docuflow_router(app_state: AppState) -> Router:
     async def start_create(message: Message, state: FSMContext) -> None:
         categories = await service.get_categories(db)
         if not categories:
-            await message.answer("Нет доступных шаблонов.")
+            await message.answer(texts.NO_TEMPLATES)
             return
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
@@ -55,7 +55,7 @@ def create_docuflow_router(app_state: AppState) -> Router:
                 for cat in categories
             ]
         )
-        await message.answer("Выберите категорию:", reply_markup=kb)
+        await message.answer(texts.CHOOSE_CATEGORY, reply_markup=kb)
 
     @router.callback_query(F.data.startswith("cat:"))
     async def choose_category(callback: CallbackQuery, state: FSMContext) -> None:
@@ -64,7 +64,7 @@ def create_docuflow_router(app_state: AppState) -> Router:
         category = callback.data.split(":", 1)[1]
         templates = await service.get_active_templates(db, category=category)
         if not templates:
-            await callback.message.edit_text("Нет шаблонов в этой категории.")  # type: ignore[union-attr]
+            await callback.message.edit_text(texts.NO_TEMPLATES_IN_CATEGORY)  # type: ignore[union-attr]
             await callback.answer()
             return
         kb = InlineKeyboardMarkup(
@@ -73,7 +73,7 @@ def create_docuflow_router(app_state: AppState) -> Router:
                 for t in templates
             ]
         )
-        await callback.message.edit_text("Выберите шаблон:", reply_markup=kb)  # type: ignore[union-attr]
+        await callback.message.edit_text(texts.CHOOSE_TEMPLATE, reply_markup=kb)  # type: ignore[union-attr]
         await callback.answer()
 
     @router.callback_query(F.data.startswith("tpl:"))
@@ -82,11 +82,11 @@ def create_docuflow_router(app_state: AppState) -> Router:
             return
         tpl_id = parse_callback_int(callback.data, "tpl:")
         if tpl_id is None:
-            await callback.answer("Некорректный запрос.", show_alert=True)
+            await callback.answer(texts.BAD_REQUEST, show_alert=True)
             return
         fields = await service.get_template_fields(db, tpl_id)
         if not fields:
-            await callback.message.edit_text("Шаблон без полей.")  # type: ignore[union-attr]
+            await callback.message.edit_text(texts.TEMPLATE_NO_FIELDS)  # type: ignore[union-attr]
             await callback.answer()
             return
         await state.update_data(template_id=tpl_id, fields=[f["name"] for f in fields],
@@ -98,8 +98,12 @@ def create_docuflow_router(app_state: AppState) -> Router:
         await state.set_state(DocGenerate.entering_fields)
         first_field = fields[0]
         await callback.message.edit_text(  # type: ignore[union-attr]
-            f"📝 Поле 1/{len(fields)}: {escape(first_field['label'])}\n"
-            f"Пример: {escape(str(first_field.get('example', '')))}"
+            texts.field_prompt(
+                1,
+                len(fields),
+                escape(first_field["label"]),
+                escape(str(first_field.get("example", ""))),
+            )
         )
         await callback.answer()
 
@@ -119,13 +123,13 @@ def create_docuflow_router(app_state: AppState) -> Router:
         value = (message.text or "").strip()
 
         if not value and field_required.get(field_name, True):
-            await message.answer("⚠️ Поле обязательное. Введите значение:")
+            await message.answer(texts.FIELD_REQUIRED)
             return
 
         if value:
             is_valid, error = validate_field_value(field_types.get(field_name, "text"), value)
             if not is_valid:
-                await message.answer(f"⚠️ {error}. Попробуйте ещё раз:")
+                await message.answer(texts.field_invalid(error))
                 return
             values[field_name] = value
 
@@ -137,21 +141,25 @@ def create_docuflow_router(app_state: AppState) -> Router:
             kb = InlineKeyboardMarkup(
                 inline_keyboard=[
                     [
-                        InlineKeyboardButton(text="✅ Сформировать", callback_data="doc_confirm"),
-                        InlineKeyboardButton(text="✏️ Исправить", callback_data="doc_edit"),
+                        InlineKeyboardButton(text=texts.BTN_GENERATE, callback_data="doc_confirm"),
+                        InlineKeyboardButton(text=texts.BTN_EDIT, callback_data="doc_edit"),
                     ]
                 ]
             )
             await state.set_state(DocGenerate.confirming)
-            await message.answer(f"📋 Проверьте данные:\n{summary}", reply_markup=kb)
+            await message.answer(texts.confirm_summary(summary), reply_markup=kb)
         else:
             next_field_name = fields[next_idx]
             labels = data.get("field_labels", {})
             examples = data.get("field_examples", {})
             await state.update_data(values=values, current_field_idx=next_idx)
             await message.answer(
-                f"📝 Поле {next_idx + 1}/{len(fields)}: {escape(labels.get(next_field_name, next_field_name))}\n"
-                f"Пример: {escape(str(examples.get(next_field_name, '')))}"
+                texts.field_prompt(
+                    next_idx + 1,
+                    len(fields),
+                    escape(labels.get(next_field_name, next_field_name)),
+                    escape(str(examples.get(next_field_name, ""))),
+                )
             )
 
     @router.callback_query(F.data == "doc_confirm", DocGenerate.confirming)
@@ -162,7 +170,7 @@ def create_docuflow_router(app_state: AppState) -> Router:
 
         template = await service.get_template(db, tpl_id)
         if not template:
-            await callback.message.edit_text("❌ Шаблон не найден.")  # type: ignore[union-attr]
+            await callback.message.edit_text(texts.TEMPLATE_NOT_FOUND)  # type: ignore[union-attr]
             await callback.answer()
             await state.clear()
             return
@@ -184,32 +192,35 @@ def create_docuflow_router(app_state: AppState) -> Router:
             file_path=file_path,
         )
 
-        await callback.message.edit_text("✅ Документ сформирован!")  # type: ignore[union-attr]
+        await callback.message.edit_text(texts.DOC_GENERATED)  # type: ignore[union-attr]
         await callback.answer()
         await callback.message.answer_document(  # type: ignore[union-attr]
             FSInputFile(file_path),
             caption=f"📄 Документ #{doc_id}",
         )
-        await callback.message.answer("Выберите действие:", reply_markup=client_menu())  # type: ignore[union-attr]
+        await callback.message.answer(texts.CHOOSE_ACTION, reply_markup=client_menu())  # type: ignore[union-attr]
         await state.clear()
 
     @router.callback_query(F.data == "doc_edit")
     async def edit_fields(callback: CallbackQuery, state: FSMContext) -> None:
         await state.set_state(DocGenerate.entering_fields)
         await state.update_data(current_field_idx=0, values={})
-        await callback.message.edit_text("✏️ Начнём заново. Поле 1:")  # type: ignore[union-attr]
+        await callback.message.edit_text(texts.RESTART_FROM_FIRST)  # type: ignore[union-attr]
         await callback.answer()
 
     @router.message(F.text == "🗂 Мои документы")
     async def my_documents(message: Message) -> None:
         docs = await service.get_user_documents(db, message.from_user.id)  # type: ignore[union-attr]
         if not docs:
-            await message.answer("Нет документов.")
+            await message.answer(texts.NO_DOCUMENTS)
             return
         for doc in docs[:5]:
             await message.answer(
-                f"📄 #{doc['id']} — {escape(str(doc.get('template_name', '')))} "
-                f"({escape(str(doc.get('created_at', '')))})"
+                texts.document_line(
+                    doc["id"],
+                    escape(str(doc.get("template_name", ""))),
+                    escape(str(doc.get("created_at", ""))),
+                )
             )
 
     @router.message(Command("buy_docs"))
@@ -228,7 +239,7 @@ def create_docuflow_router(app_state: AppState) -> Router:
         # an unconditional ok=True lets a hand-crafted update buy the pack for 1 Star
         # instead of 10. Both the payload and the amount are pinned to what we sell.
         if query.invoice_payload != "docs_pack_10" or int(query.total_amount) != 10:
-            await query.answer(ok=False, error_message="Неизвестный товар")
+            await query.answer(ok=False, error_message=texts.UNKNOWN_PRODUCT)
             return
         await query.answer(ok=True)
 
@@ -243,6 +254,6 @@ def create_docuflow_router(app_state: AppState) -> Router:
             await service.record_payment(
                 app_state.db, uid, "stars", float(sp.total_amount), sp.telegram_payment_charge_id
             )
-        await message.answer("✅ Оплачено! Лимит увеличен на 10 документов.")
+        await message.answer(texts.PAID_LIMIT_UP)
 
     return router
