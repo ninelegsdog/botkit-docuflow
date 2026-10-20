@@ -9,7 +9,7 @@ from src.core.auth import AdminGate
 from src.core.bot_factory import AppState
 from src.core.fsm import AdminAuth
 from src.core.nav import admin_menu, client_menu
-from src.docuflow import service
+from src.docuflow import service, texts
 
 
 def create_admin_router(app_state: AppState) -> Router:
@@ -31,7 +31,7 @@ def create_admin_router(app_state: AppState) -> Router:
     @router.message(Command("admin"))
     async def cmd_admin(message: Message, state: FSMContext) -> None:
         await state.set_state(AdminAuth.waiting_password)
-        await message.answer("🔑 Введите пароль:")
+        await message.answer(texts.ASK_PASSWORD)
 
     @router.message(AdminAuth.waiting_password)
     async def check_password(message: Message, state: FSMContext) -> None:
@@ -39,17 +39,16 @@ def create_admin_router(app_state: AppState) -> Router:
         if gate.is_throttled(user_id):
             await state.clear()
             await message.answer(
-                "⏳ Слишком много попыток. "
-                "Попробуйте через 5 минут.",
+                texts.TOO_MANY_ATTEMPTS,
                 reply_markup=client_menu(),
             )
             return
         if gate.authorize(user_id, message.text or ""):
             await state.clear()
-            await message.answer("✅ Добро пожаловать!", reply_markup=admin_menu())
+            await message.answer(texts.ADMIN_WELCOME, reply_markup=admin_menu())
         else:
             await state.clear()
-            await message.answer("❌ Неверный пароль.", reply_markup=client_menu())
+            await message.answer(texts.BAD_PASSWORD, reply_markup=client_menu())
 
     @router.message(F.text == "📊 Статистика")
     async def admin_stats(message: Message) -> None:
@@ -59,22 +58,19 @@ def create_admin_router(app_state: AppState) -> Router:
         doc_count = await service.get_document_count(db)
         user_count = await service.get_user_count(db)
         await message.answer(
-            f"📊 Статистика:\n"
-            f"  Шаблонов: {tpl_count}\n"
-            f"  Документов: {doc_count}\n"
-            f"  Пользователей: {user_count}"
+            texts.admin_stats(tpl_count, doc_count, user_count)
         )
 
     @router.message(F.text == "💳 Лимиты")
     async def admin_limits(message: Message) -> None:
         if not is_admin(message.from_user.id):  # type: ignore[union-attr]
             return
-        await message.answer(f"💳 Бесплатный лимит: {app_state.config.free_docs_limit} документов/мес")
+        await message.answer(texts.free_limit(app_state.config.free_docs_limit))
 
     @router.message(F.text == "👥 Доступ")
     async def admin_access(message: Message) -> None:
         if not is_admin(message.from_user.id):  # type: ignore[union-attr]
             return
-        await message.answer("👥 Управление доступом (заглушка для v1)")
+        await message.answer(texts.ACCESS_STUB)
 
     return router
