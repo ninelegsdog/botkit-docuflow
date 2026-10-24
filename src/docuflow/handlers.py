@@ -225,6 +225,17 @@ def create_docuflow_router(app_state: AppState) -> Router:
 
     @router.message(Command("buy_docs"))
     async def buy_docs(message: Message) -> None:
+        # Демо-режим: выдать квоту без реального платежа (env DEMO_GRANT_QUOTA=1).
+        # В проде — реальный инвойс Telegram Stars.
+        import os
+
+        if os.getenv("DEMO_GRANT_QUOTA", "").strip() == "1":
+            uid = message.from_user.id  # type: ignore[union-attr]
+            ok = await service.add_quota(app_state.db, uid, docs=10)
+            if ok:
+                await service.record_payment(app_state.db, uid, "demo", 0.0, "demo")
+            await message.answer(texts.PAID_LIMIT_UP)
+            return
         await message.answer_invoice(
             title="Документы",
             description="Пакет из 10 документов",
