@@ -15,7 +15,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0",
     "redis>=5.0",
     "aiohttp>=3.9",
-    "botkit-core @ git+https://github.com/ninelegsdog/botkit-core@v0.8.4",
+    "botkit-core @ git+https://github.com/ninelegsdog/botkit-core@v0.8.5",
     "reportlab>=4.0",
 ]
 
@@ -55,6 +55,7 @@ strict = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 addopts = "-ra --strict-markers --cov=src --cov-branch --cov-report=term-missing --cov-fail-under=70"
 filterwarnings = ["error::DeprecationWarning"]
