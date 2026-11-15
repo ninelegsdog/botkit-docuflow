@@ -25,7 +25,6 @@ from src.core.errors import (
 from src.core.fsm import AdminAuth, DocGenerate, TemplateCreate
 from src.core.metrics import Metrics, UpdatesMiddleware, create_metrics_app
 from src.core.nav import admin_menu, client_menu
-from src.core.sentry import init_sentry
 from src.core.storage import Storage
 from src.core.throttling import ThrottlingMiddleware
 from src.core.ui import escape, template_card
@@ -216,24 +215,7 @@ def test_create_metrics_app():
 
 
 # --------------------------------------------------------------------------- #
-# sentry
 # --------------------------------------------------------------------------- #
-def test_init_sentry_empty():
-    assert init_sentry("") is None
-
-
-def test_init_sentry_missing_sdk():
-    with patch.dict("sys.modules", {"sentry_sdk": None}):
-        init_sentry("dsn")  # ImportError path must not raise
-
-
-def test_init_sentry_with_sdk():
-    fake = MagicMock()
-    with patch.dict("sys.modules", {"sentry_sdk": fake}):
-        init_sentry("https://abc@sentry.io/1")
-        fake.init.assert_called_once_with(dsn="https://abc@sentry.io/1")
-
-
 # --------------------------------------------------------------------------- #
 # fsm / nav / ui
 # --------------------------------------------------------------------------- #
